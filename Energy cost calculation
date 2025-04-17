@@ -1,0 +1,23 @@
+# EE = Energy Efficiency
+# TE = Theoretical Energy (MWh/mt-NH3)
+# Electricity Price: $/MWh
+
+
+# Data
+FE = 0.92                      # Faradaic Efficiency
+EE = 0.636                     # Energy Efficiency (FExTE/TV(TE+V))
+TE = 5.37                      # Theoretical energy consumption (MWh/mt-NH3)
+electricity_price_per_mwh = 50  # $/MWh 
+
+
+# 1. Actual energy consumption
+actual_energy_consumption_mwh = TE / EE  # MWh/mt-NH3
+
+
+# 2. Energy cost
+energy_cost_per_mt_nh3 = actual_energy_consumption_mwh * electricity_price_per_mwh
+
+
+# Print results
+print(f"Actual energy consumption: {actual_energy_consumption_mwh:.2f} MWh/mt-NH₃")
+print(f"Energy cost: ${energy_cost_per_mt_nh3:.2f}/mt-NH₃")
