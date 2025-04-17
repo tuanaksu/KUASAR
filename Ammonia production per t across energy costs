@@ -1,0 +1,57 @@
+% Parameters
+FE = 0.92;       % Faradaic Efficiency (0–1)
+EE = 0.635;      % Energy Efficiency (0–1)
+TE = 5.37;       % Theoretical energy in MWh/ton NH3
+
+% Electricity price sweep ($/kWh)
+electricity_prices = linspace(0.007, 0.5, 100);         % $/kWh
+electricity_prices_mwh = electricity_prices * 1000;     % $/MWh
+
+% Actual energy consumption (MWh/ton NH3)
+actual_energy = TE / EE;
+
+% Cost calculation ($/ton NH3)
+costs_per_ton = actual_energy * electricity_prices_mwh;
+
+% Market price band ($/ton NH3)
+market_low = 500;
+market_high = 1200;
+
+% Cost at $50/MWh
+price_target_kWh = 0.05;
+price_target_MWh = price_target_kWh * 1000;
+cost_target = actual_energy * price_target_MWh;
+
+% Display key numbers
+fprintf('Actual energy consumption: %.2f MWh per tonne of NH3\n', actual_energy);
+fprintf('Cost at $50/MWh electricity: $%.2f per tonne of NH3\n', cost_target);
+
+% Plot
+figure;
+hold on;
+
+% Plot market price interval as shaded area
+fill([electricity_prices fliplr(electricity_prices)], ...
+     [market_low*ones(1, length(electricity_prices)), ...
+      market_high*ones(1, length(electricity_prices))], ...
+     [0.9 1 0.9], 'EdgeColor', 'none', 'FaceAlpha', 0.3);
+
+% Plot cost curve
+plot(electricity_prices, costs_per_ton, 'b-', 'LineWidth', 2);
+
+% Annotate point at $0.05/kWh
+plot(price_target_kWh, cost_target, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
+text(price_target_kWh + 0.01, cost_target, ...
+     sprintf('  Cost @ $0.05/kWh: $%.0f', cost_target), ...
+     'Color', 'r', 'FontWeight', 'bold');
+
+% Add market price lines
+yline(market_low, 'g--', 'LineWidth', 1.5, 'Label', '$500 Market Floor');
+yline(market_high, 'r--', 'LineWidth', 1.5, 'Label', '$1200 Market Ceiling');
+
+% Labels and formatting
+xlabel('Electricity Price ($/kWh)', 'FontWeight', 'bold');
+ylabel('Cost per Tonne of NH_3 ($)', 'FontWeight', 'bold');
+title('Cost of NH_3 Production vs Electricity Price');
+legend('Market Price Range', 'Production Cost', 'Target Cost @ $0.05/kWh', 'Location', 'northwest');
+grid on;
