@@ -1,0 +1,38 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants
+production_rate_mmol_per_h_cm2 = 3               # mmol/h/cm²
+molar_mass_NH3 = 17.03                            # g/mol
+hours_per_month = 30 * 24                         # Total hours in a month
+uptime_values = [0.3, 0.5, 0.7, 0.9, 1.0]              # Different uptime scenarios
+
+# Demand range (in kg/month)
+demand_kg = np.linspace(1, 2000, 500)             # From 1 kg to 1000 kg
+demand_g = demand_kg * 1000                       # Convert to grams
+
+# Plot setup
+plt.figure(figsize=(10, 6))
+
+for uptime in uptime_values:
+    # Effective production time
+    effective_hours = hours_per_month * uptime
+
+    # NH3 produced per cm² per month (in grams)
+    monthly_production_per_cm2 = production_rate_mmol_per_h_cm2 * effective_hours * (molar_mass_NH3 / 1000)  # g
+    monthly_production_per_m2 = monthly_production_per_cm2 * 10000  # g/m²
+
+    # Required electrode area (in m²)
+    required_area_m2 = demand_g / monthly_production_per_m2
+
+    # Plot
+    plt.plot(demand_kg, required_area_m2, label=f'Uptime: {int(uptime*100)}%')
+
+# Final plot formatting
+plt.title('Required Electrode Area vs. Ammonia Demand Calculated for Different Uptimes', fontsize=14)
+plt.xlabel('Ammonia Demand (kg/month)', fontsize=12)
+plt.ylabel('Required Electrode Area (m²)', fontsize=12)
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
