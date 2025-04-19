@@ -1,57 +1,51 @@
-% Parameters
-FE = 0.92;       % Faradaic Efficiency (0–1)
-EE = 0.635;      % Energy Efficiency (0–1)
-TE = 5.37;       % Theoretical energy in MWh/ton NH3
+clc;
+clear;
 
-% Electricity price sweep ($/kWh)
-electricity_prices = linspace(0.007, 0.5, 100);         % $/kWh
-electricity_prices_mwh = electricity_prices * 1000;     % $/MWh
+% === Constants from Hochman et al. 2020 ===
+E_theoretical_MWh = 5.37;             % Theoretical energy (MWh/ton NH3)
+efficiency = 0.622;                   % Aspirational energy efficiency (62.2%)
+actual_energy_MWh = E_theoretical_MWh / efficiency; % ~8.63 MWh/ton
 
-% Actual energy consumption (MWh/ton NH3)
-actual_energy = TE / EE;
+% === Electricity prices range ($/kWh) ===
+price_kWh = linspace(0.03, 0.40, 100);        % From $0.03 to $0.40
+price_MWh = price_kWh * 1000;                % Convert to $/MWh
 
-% Cost calculation ($/ton NH3)
-costs_per_ton = actual_energy * electricity_prices_mwh;
+% === Cost calculation ===
+cost_energy_only = actual_energy_MWh * price_MWh;  % Energy cost only
+fixed_costs = 76;  % From Hochman et al. ($35 capital + $41 O&M)
+total_cost_per_ton = cost_energy_only + fixed_costs;
 
-% Market price band ($/ton NH3)
-market_low = 500;
+% === Example Console Output ===
+example_price = 0.05;  % $/kWh
+example_cost = (actual_energy_MWh * example_price * 1000) + fixed_costs;
+fprintf('\n=== ENR Ammonia Production Cost Analysis ===\n');
+fprintf('Energy required (62.2%% EE): %.2f MWh/tonne\n', actual_energy_MWh);
+fprintf('Electricity price: $%.2f/kWh\n', example_price);
+fprintf('Total cost of production: $%.2f/tonne NH3\n', example_cost);
+
+% === Market price range ($/ton NH3) ===
+market_low = 700;
 market_high = 1200;
 
-% Cost at $50/MWh
-price_target_kWh = 0.05;
-price_target_MWh = price_target_kWh * 1000;
-cost_target = actual_energy * price_target_MWh;
-
-% Display key numbers
-fprintf('Actual energy consumption: %.2f MWh per tonne of NH3\n', actual_energy);
-fprintf('Cost at $50/MWh electricity: $%.2f per tonne of NH3\n', cost_target);
-
-% Plot
+% === Plotting ===
 figure;
 hold on;
 
-% Plot market price interval as shaded area
-fill([electricity_prices fliplr(electricity_prices)], ...
-     [market_low*ones(1, length(electricity_prices)), ...
-      market_high*ones(1, length(electricity_prices))], ...
+% Shaded market price band
+fill([price_kWh, fliplr(price_kWh)], ...
+     [market_low * ones(1, length(price_kWh)), market_high * ones(1, length(price_kWh))], ...
      [0.9 1 0.9], 'EdgeColor', 'none', 'FaceAlpha', 0.3);
 
-% Plot cost curve
-plot(electricity_prices, costs_per_ton, 'b-', 'LineWidth', 2);
+% Cost curve
+plot(price_kWh, total_cost_per_ton, 'b-', 'LineWidth', 2);
 
-% Annotate point at $0.05/kWh
-plot(price_target_kWh, cost_target, 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r');
-text(price_target_kWh + 0.01, cost_target, ...
-     sprintf('  Cost @ $0.05/kWh: $%.0f', cost_target), ...
-     'Color', 'r', 'FontWeight', 'bold');
-
-% Add market price lines
-yline(market_low, 'g--', 'LineWidth', 1.5, 'Label', '$500 Market Floor');
+% Market price lines
+yline(market_low, 'g--', 'LineWidth', 1.5, 'Label', '$700 Market Floor');
 yline(market_high, 'r--', 'LineWidth', 1.5, 'Label', '$1200 Market Ceiling');
 
-% Labels and formatting
+% Plot formatting
 xlabel('Electricity Price ($/kWh)', 'FontWeight', 'bold');
 ylabel('Cost per Tonne of NH_3 ($)', 'FontWeight', 'bold');
-title('Cost of NH_3 Production vs Electricity Price');
-legend('Market Price Range', 'Production Cost', 'Target Cost @ $0.05/kWh', 'Location', 'northwest');
+title('Cost of NH_3 via Direct ENR vs Electricity Price (62.2% Efficiency)');
+legend('Market Price Range', 'ENR Production Cost', 'Location', 'northwest');
 grid on;
