@@ -1,51 +1,71 @@
 clc;
 clear;
 
-% === Constants from Hochman et al. 2020 ===
-E_theoretical_MWh = 5.37;             % Theoretical energy (MWh/ton NH3)
-efficiency = 0.622;                   % Aspirational energy efficiency (62.2%)
-actual_energy_MWh = E_theoretical_MWh / efficiency; % ~8.63 MWh/ton
+% === Electricity Price Range ($/kWh) ===
+price_kWh = linspace(0.03, 0.40, 100);
+price_MWh = price_kWh * 1000;
 
-% === Electricity prices range ($/kWh) ===
-price_kWh = linspace(0.03, 0.40, 100);        % From $0.03 to $0.40
-price_MWh = price_kWh * 1000;                % Convert to $/MWh
+% === ENR Parameters ===
+ENR_energy_MWh = 8.63;  % MWh per ton NH3
+ENR_fixed_costs = 76;   % $/ton NH3
+ENR_base_costs = ENR_energy_MWh .* price_MWh + ENR_fixed_costs;
 
-% === Cost calculation ===
-cost_energy_only = actual_energy_MWh * price_MWh;  % Energy cost only
-fixed_costs = 76;  % From Hochman et al. ($35 capital + $41 O&M)
-total_cost_per_ton = cost_energy_only + fixed_costs;
+% === Haber-Bosch Parameters ===
+HB_energy_MWh = 10.5;   % Average MWh/ton NH3
+HB_fixed_costs = 90;    % Estimated baseline cost
+HB_base_costs = HB_energy_MWh .* price_MWh + HB_fixed_costs;
+HB_CO2_emissions = 1.33;  % ton CO2 per ton NH3
 
-% === Example Console Output ===
-example_price = 0.05;  % $/kWh
-example_cost = (actual_energy_MWh * example_price * 1000) + fixed_costs;
-fprintf('\n=== ENR Ammonia Production Cost Analysis ===\n');
-fprintf('Energy required (62.2%% EE): %.2f MWh/tonne\n', actual_energy_MWh);
-fprintf('Electricity price: $%.2f/kWh\n', example_price);
-fprintf('Total cost of production: $%.2f/tonne NH3\n', example_cost);
+% === Carbon Credit Prices ($/ton CO2) ===
+carbon_price_2035 = 120;
+carbon_price_2050 = 175;
 
-% === Market price range ($/ton NH3) ===
-market_low = 700;
-market_high = 1200;
+% === Haber-Bosch Costs with Carbon Penalties ===
+HB_costs_2035 = HB_base_costs + HB_CO2_emissions * carbon_price_2035;
+HB_costs_2050 = HB_base_costs + HB_CO2_emissions * carbon_price_2050;
+
+% === ENR Carbon Credit Income (Subtract from Cost) ===
+ENR_carbon_income_2035 = HB_CO2_emissions * carbon_price_2035;  % Revenue per ton NH3
+ENR_carbon_income_2050 = HB_CO2_emissions * carbon_price_2050;
+
+ENR_costs_2035 = ENR_base_costs - ENR_carbon_income_2035;
+ENR_costs_2050 = ENR_base_costs - ENR_carbon_income_2050;
 
 % === Plotting ===
 figure;
 hold on;
 
-% Shaded market price band
-fill([price_kWh, fliplr(price_kWh)], ...
-     [market_low * ones(1, length(price_kWh)), market_high * ones(1, length(price_kWh))], ...
-     [0.9 1 0.9], 'EdgeColor', 'none', 'FaceAlpha', 0.3);
+plot(price_kWh, ENR_costs_2035, 'b-', 'LineWidth', 2);
+plot(price_kWh, ENR_costs_2050, 'b--', 'LineWidth', 2);
+plot(price_kWh, HB_costs_2035, 'r-', 'LineWidth', 2);
+plot(price_kWh, HB_costs_2050, 'r--', 'LineWidth', 2);
 
-% Cost curve
-plot(price_kWh, total_cost_per_ton, 'b-', 'LineWidth', 2);
+legend('ENR Cost (2035, w/ Carbon Credit)', ...
+       'ENR Cost (2050, w/ Carbon Credit)', ...
+       'H-B Cost (2035, w/ Carbon Penalty)', ...
+       'H-B Cost (2050, w/ Carbon Penalty)', ...
+       'Location', 'northwest');
 
-% Market price lines
-yline(market_low, 'g--', 'LineWidth', 1.5, 'Label', '$700 Market Floor');
-yline(market_high, 'r--', 'LineWidth', 1.5, 'Label', '$1200 Market Ceiling');
-
-% Plot formatting
 xlabel('Electricity Price ($/kWh)', 'FontWeight', 'bold');
-ylabel('Cost per Tonne of NH_3 ($)', 'FontWeight', 'bold');
-title('Cost of NH_3 via Direct ENR vs Electricity Price (62.2% Efficiency)');
-legend('Market Price Range', 'ENR Production Cost', 'Location', 'northwest');
+ylabel('Net Cost per Tonne of NH_3 ($)', 'FontWeight', 'bold');
+title('ENR vs Haber-Bosch: Carbon Credit Adjusted Cost Comparison');
 grid on;
+
+% === Console Output at $0.05/kWh ===
+example_price = 0.05;
+ENR_base = ENR_energy_MWh * example_price * 1000 + ENR_fixed_costs;
+ENR_2035_net = ENR_base - ENR_carbon_income_2035;
+ENR_2050_net = ENR_base - ENR_carbon_income_2050;
+
+HB_base = HB_energy_MWh * example_price * 1000 + HB_fixed_costs;
+HB_2035_total = HB_base + HB_CO2_emissions * carbon_price_2035;
+HB_2050_total = HB_base + HB_CO2_emissions * carbon_price_2050;
+
+fprintf('\n=== NH₃ Production Cost @ $%.2f/kWh ===\n', example_price);
+fprintf('ENR Base Cost:           $%.2f/ton\n', ENR_base);
+fprintf('ENR Net (2035 credit):   $%.2f/ton\n', ENR_2035_net);
+fprintf('ENR Net (2050 credit):   $%.2f/ton\n', ENR_2050_net);
+fprintf('-----------------------------\n');
+fprintf('HB Base Cost:            $%.2f/ton\n', HB_base);
+fprintf('HB Total (2035 penalty): $%.2f/ton\n', HB_2035_total);
+fprintf('HB Total (2050 penalty): $%.2f/ton\n', HB_2050_total);
