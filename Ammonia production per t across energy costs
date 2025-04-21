@@ -1,71 +1,81 @@
 clc;
 clear;
 
+% === Constants ===
+FE = 0.92;                    % Faradaic Efficiency (from Liu et al., 2024)
+TE = 0.714;                    % Thermodynamic energy (MJ/mol NH3)
+EE = 0.711;                  % Overall energy efficiency from Liu et al.
+molar_mass_NH3 = 17.031;      % g/mol
+mol_per_ton = 1e6 / molar_mass_NH3;  % mol/ton NH3
+MJ_per_ton = TE / EE * FE * mol_per_ton;
+tandem_energy_MWh = MJ_per_ton / 3600;  % Convert MJ to MWh
+
 % === Electricity Price Range ($/kWh) ===
 price_kWh = linspace(0.03, 0.40, 100);
 price_MWh = price_kWh * 1000;
 
-% === ENR Parameters ===
-ENR_energy_MWh = 8.63;  % MWh per ton NH3
-ENR_fixed_costs = 76;   % $/ton NH3
-ENR_base_costs = ENR_energy_MWh .* price_MWh + ENR_fixed_costs;
+% === Tandem Method Costs (no fixed cost)
+tandem_base_cost = tandem_energy_MWh .* price_MWh;
 
 % === Haber-Bosch Parameters ===
-HB_energy_MWh = 10.5;   % Average MWh/ton NH3
-HB_fixed_costs = 90;    % Estimated baseline cost
+HB_energy_MWh = 10.5;        % MWh/ton NH3 (average estimate)
+HB_fixed_costs = 90;         % Estimated non-energy cost ($/ton NH3)
 HB_base_costs = HB_energy_MWh .* price_MWh + HB_fixed_costs;
-HB_CO2_emissions = 1.33;  % ton CO2 per ton NH3
 
-% === Carbon Credit Prices ($/ton CO2) ===
-carbon_price_2035 = 120;
+% === Carbon Impact
+HB_CO2_emissions = 1.33;     % tons CO2 per ton NH3
+
+carbon_price_2035 = 120;     % $/ton CO2
 carbon_price_2050 = 175;
 
-% === Haber-Bosch Costs with Carbon Penalties ===
+% === Haber-Bosch Total Cost with Carbon Penalties
 HB_costs_2035 = HB_base_costs + HB_CO2_emissions * carbon_price_2035;
 HB_costs_2050 = HB_base_costs + HB_CO2_emissions * carbon_price_2050;
 
-% === ENR Carbon Credit Income (Subtract from Cost) ===
-ENR_carbon_income_2035 = HB_CO2_emissions * carbon_price_2035;  % Revenue per ton NH3
-ENR_carbon_income_2050 = HB_CO2_emissions * carbon_price_2050;
+% === Tandem Carbon Credit (revenue, subtracted from energy-only cost)
+tandem_credit_2035 = HB_CO2_emissions * carbon_price_2035;
+tandem_credit_2050 = HB_CO2_emissions * carbon_price_2050;
 
-ENR_costs_2035 = ENR_base_costs - ENR_carbon_income_2035;
-ENR_costs_2050 = ENR_base_costs - ENR_carbon_income_2050;
+tandem_cost_2035 = tandem_base_cost - tandem_credit_2035;
+tandem_cost_2050 = tandem_base_cost - tandem_credit_2050;
 
 % === Plotting ===
 figure;
 hold on;
 
-plot(price_kWh, ENR_costs_2035, 'b-', 'LineWidth', 2);
-plot(price_kWh, ENR_costs_2050, 'b--', 'LineWidth', 2);
+plot(price_kWh, tandem_cost_2035, 'b-', 'LineWidth', 2);
+plot(price_kWh, tandem_cost_2050, 'b--', 'LineWidth', 2);
 plot(price_kWh, HB_costs_2035, 'r-', 'LineWidth', 2);
 plot(price_kWh, HB_costs_2050, 'r--', 'LineWidth', 2);
 
-legend('ENR Cost (2035, w/ Carbon Credit)', ...
-       'ENR Cost (2050, w/ Carbon Credit)', ...
-       'H-B Cost (2035, w/ Carbon Penalty)', ...
-       'H-B Cost (2050, w/ Carbon Penalty)', ...
-       'Location', 'northwest');
-
 xlabel('Electricity Price ($/kWh)', 'FontWeight', 'bold');
-ylabel('Net Cost per Tonne of NH_3 ($)', 'FontWeight', 'bold');
-title('ENR vs Haber-Bosch: Carbon Credit Adjusted Cost Comparison');
+ylabel('Net Cost per Tonne of NH₃ ($)', 'FontWeight', 'bold');
+title('NH₃ Production Cost: Tandem Plasma (Energy Only) vs Haber-Bosch (w/ Carbon)', 'FontWeight', 'bold');
+legend('Tandem (2035 w/ Credit)', ...
+       'Tandem (2050 w/ Credit)', ...
+       'Haber-Bosch (2035 w/ Penalty)', ...
+       'Haber-Bosch (2050 w/ Penalty)', ...
+       'Location', 'northwest');
 grid on;
 
-% === Console Output at $0.05/kWh ===
+% === Console Output Example (@ $0.05/kWh)
 example_price = 0.05;
-ENR_base = ENR_energy_MWh * example_price * 1000 + ENR_fixed_costs;
-ENR_2035_net = ENR_base - ENR_carbon_income_2035;
-ENR_2050_net = ENR_base - ENR_carbon_income_2050;
+electricity_cost = example_price * 1000;
 
-HB_base = HB_energy_MWh * example_price * 1000 + HB_fixed_costs;
-HB_2035_total = HB_base + HB_CO2_emissions * carbon_price_2035;
-HB_2050_total = HB_base + HB_CO2_emissions * carbon_price_2050;
+tandem_energy_cost = tandem_energy_MWh * electricity_cost;
+tandem_net_2035 = tandem_energy_cost - tandem_credit_2035;
+tandem_net_2050 = tandem_energy_cost - tandem_credit_2050;
+
+HB_base = HB_energy_MWh * electricity_cost + HB_fixed_costs;
+HB_net_2035 = HB_base + HB_CO2_emissions * carbon_price_2035;
+HB_net_2050 = HB_base + HB_CO2_emissions * carbon_price_2050;
 
 fprintf('\n=== NH₃ Production Cost @ $%.2f/kWh ===\n', example_price);
-fprintf('ENR Base Cost:           $%.2f/ton\n', ENR_base);
-fprintf('ENR Net (2035 credit):   $%.2f/ton\n', ENR_2035_net);
-fprintf('ENR Net (2050 credit):   $%.2f/ton\n', ENR_2050_net);
+fprintf('Tandem Energy = %.2f MWh/ton NH₃\n', tandem_energy_MWh);
+fprintf('Tandem Energy-Only Cost:    $%.2f/ton\n', tandem_energy_cost);
+fprintf('Tandem Net (2035 credit):   $%.2f/ton\n', tandem_net_2035);
+fprintf('Tandem Net (2050 credit):   $%.2f/ton\n', tandem_net_2050);
 fprintf('-----------------------------\n');
-fprintf('HB Base Cost:            $%.2f/ton\n', HB_base);
-fprintf('HB Total (2035 penalty): $%.2f/ton\n', HB_2035_total);
-fprintf('HB Total (2050 penalty): $%.2f/ton\n', HB_2050_total);
+fprintf('Haber-Bosch Base Cost:      $%.2f/ton\n', HB_base);
+fprintf('HB Total (2035 penalty):    $%.2f/ton\n', HB_net_2035);
+fprintf('HB Total (2050 penalty):    $%.2f/ton\n', HB_net_2050);
